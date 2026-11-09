@@ -1,0 +1,195 @@
+<!DOCTYPE html>
+<html lang="en"><head><meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<meta name="theme-color" content="#050b14"><meta name="apple-mobile-web-app-capable" content="yes">
+<title>JARVIS</title>
+<style>
+:root{--bg:#050b14;--pn:#0b1626;--ln:#16324d;--tx:#d6ecff;--dm:#6f8da8;--acc:#19e6c1;--red:#ff4d5e}
+*{box-sizing:border-box}html,body{height:100%;margin:0}
+body{background:var(--bg);color:var(--tx);font:14px/1.45 system-ui,Segoe UI,Roboto,sans-serif;display:grid;grid-template-columns:250px 1fr 370px;gap:10px;padding:10px;overflow:hidden}
+.card{background:var(--pn);border:1px solid var(--ln);border-radius:14px;padding:12px;min-height:0;display:flex;flex-direction:column}
+h3{margin:0 0 8px;font-size:11px;letter-spacing:.2em;color:var(--dm);text-transform:uppercase;flex:none}
+canvas{display:block}#left{gap:8px;overflow:auto}
+#map,#off{width:100%;height:105px;border:1px solid var(--ln);border-radius:10px;flex:none}#off{image-rendering:pixelated;background:#0b2236}
+#feed{flex:1;overflow:auto;min-height:70px;font-size:12px;color:var(--dm)}#feed div{padding:4px 0;border-bottom:1px solid var(--ln)}
+#center{display:grid;grid-template-rows:1fr 240px;gap:10px;min-height:0}
+#orbbox{position:relative;padding:0;overflow:hidden}#cv{position:absolute;inset:0;width:100%;height:100%}
+#lines{position:absolute;inset:0;width:100%;height:100%;pointer-events:none}
+#lines path{fill:none;stroke:var(--acc);stroke-width:1.2;stroke-dasharray:6 6;animation:fl 1s linear infinite;opacity:.35}
+#lines path.on{opacity:1;stroke-width:2}@keyframes fl{to{stroke-dashoffset:-12}}
+#nodes{position:absolute;left:12px;top:12px;display:flex;flex-direction:column;gap:8px}
+.node{border:1px solid var(--acc);color:var(--acc);background:#050b14aa;border-radius:8px;padding:6px 12px;font-size:11px;letter-spacing:.15em;cursor:pointer;text-align:left}
+.node.on{background:var(--acc);color:#04131a}
+#term{position:absolute;top:12px;right:12px;border:1px solid var(--red);color:var(--red);background:#050b14aa;border-radius:20px;padding:6px 14px;font-size:11px;letter-spacing:.2em;cursor:pointer}
+#status{position:absolute;bottom:42px;left:0;right:0;text-align:center;font-size:11px;letter-spacing:.3em;color:var(--acc)}
+#wv{position:absolute;bottom:8px;left:50%;transform:translateX(-50%);width:220px;height:28px}
+#pbody{flex:1;overflow:auto;font-size:13px}#pbody label{display:block;margin:4px 0}
+.row{display:flex;gap:8px;align-items:center;margin:7px 0;flex-wrap:wrap}.row>span{color:var(--dm);min-width:64px}
+select,input[type=text],#sb,#mi{background:transparent;color:var(--tx);border:1px solid var(--ln);border-radius:8px;padding:6px;font:inherit;min-width:0;flex:1}
+select option{background:#0b1626}
+.sm{background:transparent;border:1px solid var(--acc);color:var(--acc);border-radius:8px;padding:5px 10px;font-size:11px;letter-spacing:.1em;cursor:pointer}
+.sw{width:22px;height:22px;border-radius:50%;border:2px solid transparent;cursor:pointer}.sw.on{border-color:#fff}
+.mem{display:flex;justify-content:space-between;gap:8px;padding:5px 0;border-bottom:1px solid var(--ln)}.mem b{cursor:pointer;color:var(--red)}
+#log{flex:1;min-height:0;overflow:auto;display:flex;flex-direction:column;gap:8px;padding-right:2px}
+.m{padding:8px 10px;border-radius:10px;max-width:92%;word-wrap:break-word}.u{align-self:flex-end;background:#0e3a4a;border:1px solid var(--ln)}
+.a{align-self:flex-start;border:1px solid var(--ln)}.m code{background:#00000055;padding:1px 5px;border-radius:5px}.typing{opacity:.6}
+#chips{display:flex;gap:6px;overflow-x:auto;padding:8px 0 4px;flex:none}
+.chip{white-space:nowrap;background:transparent;border:1px solid var(--ln);color:var(--dm);border-radius:14px;padding:4px 10px;font-size:12px;cursor:pointer}
+#bar{display:flex;gap:6px;flex:none}
+#inp{flex:1;min-width:0;background:transparent;border:1px solid var(--ln);color:var(--tx);border-radius:10px;padding:10px;font:inherit}
+.btn{background:var(--acc);color:#04131a;border:0;border-radius:10px;padding:0 14px;font-size:16px;font-weight:700;cursor:pointer}
+#mic.rec{background:var(--red);color:#fff}
+@media(max-width:900px){body{display:flex;flex-direction:column;overflow:auto;height:auto;min-height:100%}
+#center{display:flex;flex-direction:column;flex:none}#orbbox{height:290px;flex:none}#panel{height:250px;flex:none}#chat{height:75vh;flex:none}#left{flex:none;height:auto;order:3}}
+</style></head><body>
+<div class="card" id="left"><h3>Global map</h3><canvas id="map"></canvas><h3>Agent office</h3><canvas id="off"></canvas><h3>System feed</h3><div id="feed"></div></div>
+
+<div id="center">
+ <div class="card" id="orbbox"><canvas id="cv"></canvas><svg id="lines"></svg>
+  <div id="nodes"><button class="node on" data-k="memory">MEMORY</button><button class="node" data-k="skills">SKILLS</button><button class="node" data-k="monitor">MONITOR</button><button class="node" data-k="settings">SETTINGS</button></div>
+  <button id="term">TERMINATE</button><div id="status">STANDBY</div><canvas id="wv" width="220" height="28"></canvas></div>
+ <div class="card" id="panel"><div id="pbody"></div></div>
+</div>
+
+<div class="card" id="chat"><h3>Assistant channel</h3><div id="log"></div><div id="chips"></div>
+ <div id="bar"><input id="inp" placeholder="Type to JARVIS..." autocomplete="off"><button class="btn" id="mic">🎤</button><button class="btn" id="send">➤</button></div></div>
+
+<script>
+const $=s=>document.querySelector(s),$$=s=>document.querySelectorAll(s);
+const LS=(k,v)=>{try{if(v===undefined)return JSON.parse(localStorage.getItem(k));localStorage.setItem(k,JSON.stringify(v))}catch(e){return null}};
+const S=Object.assign({mem:[],hist:[],voice:true,wake:false,rate:1,pitch:1,acc:"#19e6c1",lang:"en-IN",vname:"",api:""},LS("jv2")||{});S.wake=false;
+const save=()=>LS("jv2",{mem:S.mem,hist:S.hist.slice(-40),voice:S.voice,rate:S.rate,pitch:S.pitch,acc:S.acc,lang:S.lang,vname:S.vname,api:S.api});
+const API=()=>S.api||(location.protocol.startsWith("http")?location.origin:"http://localhost:5000");
+let rgb=[25,230,193],mode="idle",busy=false,speaking=false,msgs=0,online=null,lats=[],memT=0,cur="memory",t0=Date.now(),speed=.004;
+function accent(h){S.acc=h;document.documentElement.style.setProperty("--acc",h);rgb=[1,3,5].map(i=>parseInt(h.substr(i,2),16))}accent(S.acc);
+const esc=t=>t.replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;");
+const md=t=>esc(t).replace(/\*\*(.+?)\*\*/g,"<b>$1</b>").replace(/`([^`]+)`/g,"<code>$1</code>").replace(/\n/g,"<br>");
+function setMode(m,label){mode=m;$("#status").textContent=label||m.toUpperCase();speed={idle:.004,listen:.015,think:.025,speak:.03}[m]}
+function log(t){const d=document.createElement("div");d.textContent=new Date().toLocaleTimeString()+"  "+t;$("#feed").prepend(d);if($("#feed").children.length>60)$("#feed").lastChild.remove()}
+
+/* ORB + WAVE */
+const cv=$("#cv"),cx=cv.getContext("2d"),wv=$("#wv"),wx=wv.getContext("2d");let W,H,pts=[],rot=0;
+function rs(){W=cv.width=cv.clientWidth*devicePixelRatio;H=cv.height=cv.clientHeight*devicePixelRatio}
+for(let i=0;i<500;i++){const a=Math.acos(2*Math.random()-1),b=Math.random()*6.283;pts.push([Math.sin(a)*Math.cos(b),Math.cos(a),Math.sin(a)*Math.sin(b)])}
+rs();
+(function draw(){const T=Date.now(),lvl=mode==="idle"?0:.5+.5*Math.sin(T/(mode==="think"?110:190));rot+=speed;cx.clearRect(0,0,W,H);
+ const R=Math.min(W,H)*.25*(1+lvl*.1),c=Math.cos(rot),s=Math.sin(rot),col=rgb.join(",");
+ const g=cx.createRadialGradient(W/2,H/2,0,W/2,H/2,R*1.7);g.addColorStop(0,"rgba("+col+",.35)");g.addColorStop(1,"rgba("+col+",0)");cx.fillStyle=g;cx.fillRect(0,0,W,H);
+ for(const p of pts){const x=p[0]*c-p[2]*s,z=p[0]*s+p[2]*c,k=(z+1.5)/2.5;cx.fillStyle="rgba("+col+","+(.2+.8*k)+")";cx.fillRect(W/2+x*R,H/2+p[1]*R,1.8*k*devicePixelRatio,1.8*k*devicePixelRatio)}
+ cx.strokeStyle="rgba("+col+",.5)";cx.lineWidth=devicePixelRatio;
+ for(let i=0;i<2;i++){cx.beginPath();cx.ellipse(W/2,H/2,R*1.3,R*(.35+i*.2),rot*(i?-2:2)+i,0,6.283);cx.stroke()}
+ wx.clearRect(0,0,220,28);wx.fillStyle="rgb("+col+")";for(let i=0;i<32;i++){const h=2+(mode==="idle"?1:lvl*22*Math.abs(Math.sin(i*1.7+T/90)));wx.fillRect(i*7,14-h/2,4,h)}
+ requestAnimationFrame(draw)})();
+
+/* NODE LINES */
+function lines(){const b=$("#orbbox").getBoundingClientRect(),R=Math.min(b.width,b.height)*.25*1.3,X=b.width/2,Y=b.height/2-10;let d="";
+ $$(".node").forEach((n,i)=>{const r=n.getBoundingClientRect(),x=r.right-b.left,y=r.top+r.height/2-b.top;
+  d+='<path class="'+(n.dataset.k===cur?"on":"")+'" d="M'+x+' '+y+' H'+(x+22+i*14)+' V'+(Y+(i-1.5)*14)+' H'+(X-R)+'"/>'});$("#lines").innerHTML=d}
+addEventListener("resize",()=>{rs();lines()});rs();setTimeout(lines,60);
+
+/* MAP + OFFICE */
+const mp=$("#map"),mx=mp.getContext("2d"),spots=[],rip=[];for(let i=0;i<16;i++)spots.push([Math.random(),Math.random()]);
+setInterval(()=>{if(!mp.clientWidth)return;mp.width=mp.clientWidth;mp.height=mp.clientHeight;const t=Date.now()/400;
+ mx.fillStyle="#0a2236";for(let x=6;x<mp.width;x+=8)for(let y=6;y<mp.height;y+=8)if(Math.sin(x*.07)+Math.cos(y*.11)+Math.sin((x+y)*.05)>.3)mx.fillRect(x,y,3,3);
+ spots.forEach((p,i)=>{mx.fillStyle=i%3?"#ffb020":"#ff4d5e";mx.globalAlpha=.4+.6*Math.abs(Math.sin(t+i));mx.fillRect(p[0]*mp.width,p[1]*mp.height,4,4)});mx.globalAlpha=1;
+ rip.forEach(r=>{r.r+=2;mx.strokeStyle="rgba("+rgb+","+Math.max(0,1-r.r/60)+")";mx.beginPath();mx.arc(r.x*mp.width,r.y*mp.height,r.r,0,6.283);mx.stroke()});while(rip.length&&rip[0].r>60)rip.shift()},60);
+const oc=$("#off"),ox=oc.getContext("2d");oc.width=160;oc.height=64;
+const ag=[{c:"#19e6c1",d:[10,12],x:30,y:40},{c:"#ffb020",d:[50,8],x:60,y:40},{c:"#ff4d5e",d:[90,12],x:100,y:40},{c:"#7aa2ff",d:[125,10],x:130,y:40}];
+setInterval(()=>{ox.fillStyle="#0b2236";ox.fillRect(0,0,160,64);ox.fillStyle="#12385a";for(let x=0;x<160;x+=16)ox.fillRect(x,0,1,64);
+ ag.forEach((a,i)=>{const on=(mode==="listen"&&i==0)||(mode==="think"&&i==1)||(mode==="speak"&&i==2)||(Date.now()<memT&&i==3);
+  ox.fillStyle="#2a4f73";ox.fillRect(a.d[0],a.d[1],22,8);ox.fillStyle=on?"#fff":"#19e6c155";ox.fillRect(a.d[0]+9,a.d[1]+1,4,3);
+  const tx=on?a.d[0]+9:a.x+Math.random()*10-5,ty=on?a.d[1]+11:Math.max(24,Math.min(58,a.y+Math.random()*10-5));
+  a.x+=Math.sign(tx-a.x)*Math.min(3,Math.abs(tx-a.x));a.y+=Math.sign(ty-a.y)*Math.min(3,Math.abs(ty-a.y));
+  ox.fillStyle=a.c;ox.fillRect(a.x,a.y,4,6);ox.fillStyle="#fde3c8";ox.fillRect(a.x,a.y-2,4,3)})},300);
+
+/* PANELS */
+const SW=["#19e6c1","#4da6ff","#39e66b","#b57aff","#ffb020","#ff4d5e"];
+function panel(k){cur=k||cur;$$(".node").forEach(n=>n.classList.toggle("on",n.dataset.k===cur));lines();const p=$("#pbody");
+ if(cur==="memory"){p.innerHTML='<h3>Memory</h3>'+(S.mem.length?S.mem.map((m,i)=>'<div class="mem"><span>'+esc(m)+'</span><b data-i="'+i+'">✕</b></div>').join(""):'<div style="color:var(--dm)">Empty. Say: remember that I like cricket</div>')+'<div class="row"><input id="mi" placeholder="Add a memory..."><button class="sm" id="ma">ADD</button></div>';
+  p.querySelectorAll("b").forEach(b=>b.onclick=()=>{S.mem.splice(+b.dataset.i,1);save();panel()});
+  $("#ma").onclick=()=>{const v=$("#mi").value.trim();if(v){S.mem.push(v);memT=Date.now()+2500;save();panel()}}}
+ if(cur==="skills")p.innerHTML='<h3>Skills</h3>• <b>time</b> / <b>date</b><br>• <b>weather</b> (allow location)<br>• <b>timer 5 minutes</b><br>• <b>calculate 12*8+3</b><br>• <b>remember …</b> / <b>what do you remember</b> / <b>forget all</b><br>• <b>open youtube / google / maps / whatsapp</b><br>• <b>search for …</b><br>• <b>theme red / blue / green / purple / orange</b><br>• <b>clear chat</b><br>• anything else → AI brain<br>• Wake word: turn on in Settings, then say “Jarvis …”';
+ if(cur==="monitor"){const al=lats.length?Math.round(lats.reduce((a,b)=>a+b,0)/lats.length):0,u=Math.floor((Date.now()-t0)/1000);
+  p.innerHTML='<h3>Monitor</h3><div class="row"><span>Backend</span>'+(online===null?"checking…":online?'<b style="color:#39e66b">ONLINE</b>':'<b style="color:var(--red)">OFFLINE</b>')+'</div><div class="row"><span>Latency</span>'+al+' ms avg</div><div class="row"><span>Messages</span>'+msgs+'</div><div class="row"><span>Memory</span>'+S.mem.length+' items</div><div class="row"><span>Uptime</span>'+Math.floor(u/60)+"m "+u%60+'s</div><div class="row"><span>Voice in</span>'+(SR?"supported":"needs Chrome")+'</div><div class="row"><span>Server</span>'+esc(API())+'</div>'}
+ if(cur==="settings")settingsUI(p)}
+function fillVoices(){const s=$("#vs");if(!s||!window.speechSynthesis)return;s.innerHTML='<option value="">Default</option>'+speechSynthesis.getVoices().map(v=>'<option value="'+esc(v.name)+'"'+(v.name===S.vname?" selected":"")+'>'+esc(v.name)+" ("+v.lang+")</option>").join("")}
+function settingsUI(p){p.innerHTML='<h3>Settings</h3><label><input type="checkbox" id="sv" '+(S.voice?"checked":"")+'> Speak replies</label><label><input type="checkbox" id="sw" '+(S.wake?"checked":"")+'> Wake word “Jarvis”</label>'+
+ '<div class="row"><span>Voice</span><select id="vs"></select></div><div class="row"><span>Speed</span><input type="range" id="sr" min=".6" max="1.6" step=".1" value="'+S.rate+'"><span style="min-width:0">Pitch</span><input type="range" id="sp" min=".5" max="1.5" step=".1" value="'+S.pitch+'"></div>'+
+ '<div class="row"><span>Language</span><select id="sl">'+[["en-IN","English (India)"],["en-US","English (US)"],["en-GB","English (UK)"],["hi-IN","Hindi"]].map(l=>'<option value="'+l[0]+'"'+(l[0]===S.lang?" selected":"")+">"+l[1]+"</option>").join("")+'</select></div>'+
+ '<div class="row"><span>Color</span>'+SW.map(c=>'<div class="sw'+(c===S.acc?" on":"")+'" data-c="'+c+'" style="background:'+c+'"></div>').join("")+'</div>'+
+ '<div class="row"><span>Server</span><input id="sb" placeholder="same server (default)" value="'+esc(S.api)+'"></div><div class="row"><button class="sm" id="tv">TEST VOICE</button><button class="sm" id="ex">EXPORT CHAT</button><button class="sm" id="cl">CLEAR CHAT</button></div>';
+ fillVoices();$("#sv").onchange=e=>{S.voice=e.target.checked;save()};$("#sw").onchange=e=>wake(e.target.checked);
+ $("#vs").onchange=e=>{S.vname=e.target.value;save()};$("#sr").oninput=e=>{S.rate=+e.target.value;save()};$("#sp").oninput=e=>{S.pitch=+e.target.value;save()};
+ $("#sl").onchange=e=>{S.lang=e.target.value;save()};p.querySelectorAll(".sw").forEach(s=>s.onclick=()=>{accent(s.dataset.c);save();panel()});
+ $("#sb").onchange=e=>{S.api=e.target.value.trim().replace(/\/$/,"");save();ping();log("server saved")};
+ $("#tv").onclick=()=>speak("Voice test. All systems online.",true);$("#cl").onclick=clearChat;
+ $("#ex").onclick=()=>{const a=document.createElement("a");a.href=URL.createObjectURL(new Blob([S.hist.map(h=>(h.role==="user"?"YOU: ":"JARVIS: ")+h.content).join("\n\n")],{type:"text/plain"}));a.download="jarvis-chat.txt";a.click()}}
+$$(".node").forEach(n=>n.onclick=()=>panel(n.dataset.k));
+if(window.speechSynthesis)speechSynthesis.onvoiceschanged=fillVoices;
+setInterval(()=>{if(cur==="monitor")panel()},2000);
+
+/* VOICE OUT */
+function speak(t,force){if((!S.voice&&!force)||!window.speechSynthesis)return;speechSynthesis.cancel();
+ const u=new SpeechSynthesisUtterance(t.replace(/[*`#]/g,""));u.rate=S.rate;u.pitch=S.pitch;u.lang=S.lang;
+ const v=speechSynthesis.getVoices().find(v=>v.name===S.vname);if(v)u.voice=v;
+ u.onstart=()=>{speaking=true;setMode("speak","SPEAKING")};u.onend=u.onerror=()=>{speaking=false;if(!busy)setMode("idle","STANDBY")};speechSynthesis.speak(u)}
+
+/* VOICE IN */
+const SR=window.SpeechRecognition||window.webkitSpeechRecognition;let rec=null,wk=null,awaiting=false;
+$("#mic").onclick=()=>{if(!SR)return bubble("a","Voice input needs Chrome.");if(rec){rec.stop();return}
+ rec=new SR();rec.lang=S.lang;rec.onstart=()=>{$("#mic").classList.add("rec");setMode("listen","LISTENING")};
+ rec.onresult=e=>send(e.results[0][0].transcript);
+ rec.onend=()=>{rec=null;$("#mic").classList.remove("rec");if(!busy&&!speaking)setMode("idle","STANDBY")};rec.start()};
+function wake(on){S.wake=on;if(!on){if(wk){wk.onend=null;wk.stop();wk=null}log("wake word off");return}
+ if(!SR){S.wake=false;panel();return bubble("a","Wake word needs Chrome.")}
+ const run=()=>{if(!S.wake)return;wk=new SR();wk.lang=S.lang;wk.continuous=true;
+  wk.onresult=e=>{const t=e.results[e.results.length-1][0].transcript.trim(),l=t.toLowerCase();if(speaking||busy||!t)return;
+   if(l.includes("jarvis")){const c=t.slice(l.indexOf("jarvis")+6).replace(/^[\s,.!?]+/,"");if(c)send(c);else{awaiting=true;speak("Yes?",true)}}
+   else if(awaiting){awaiting=false;send(t)}};
+  wk.onerror=e=>{if(e.error==="not-allowed"){S.wake=false;panel()}};wk.onend=()=>setTimeout(run,500);try{wk.start()}catch(e){}};
+ run();log("wake word on: say Jarvis")}
+
+/* SKILLS */
+async function weather(){try{const p=await new Promise((ok,no)=>navigator.geolocation.getCurrentPosition(ok,no,{timeout:8000}));
+ const r=await fetch("https://api.open-meteo.com/v1/forecast?latitude="+p.coords.latitude+"&longitude="+p.coords.longitude+"&current_weather=true"),c=(await r.json()).current_weather;
+ return"It is "+c.temperature+"°C with wind at "+c.windspeed+" km/h."}catch(e){return"I couldn't get the weather. Allow location access and try again."}}
+function local(q){const l=q.toLowerCase().trim();let m;
+ if(/^(clear|reset) chat/.test(l)){clearChat();return"Chat cleared."}
+ if(/\btime\b/.test(l)&&l.length<30)return"It is "+new Date().toLocaleTimeString()+".";
+ if(/\b(date|day)\b/.test(l)&&l.length<30)return"Today is "+new Date().toLocaleDateString(undefined,{weekday:"long",year:"numeric",month:"long",day:"numeric"})+".";
+ if(m=l.match(/timer (?:for )?(\d+)\s*(sec|min|hour)/)){const n=+m[1],ms=n*(m[2]==="hour"?3600000:m[2]==="min"?60000:1000);
+  setTimeout(()=>{const t="Timer finished: "+n+" "+m[2];bubble("a",t);speak(t);log(t)},ms);return"Timer started: "+n+" "+m[2]+"."}
+ if((m=l.match(/^(?:calc(?:ulate)?|what(?:'s| is))?\s*([\d.\s+\-*/()%^x]+)$/))&&/\d\s*[+\-*/x^%]\s*\d/.test(l)){try{const v=Function('"use strict";return ('+m[1].replace(/x/g,"*").replace(/\^/g,"**")+")")();return"= "+(+v.toFixed(6))}catch(e){}}
+ if(/weather|temperature/.test(l))return weather();
+ if(m=l.match(/^remember (?:that )?(.+)/)){S.mem.push(q.replace(/^remember (that )?/i,""));memT=Date.now()+2500;save();panel();return"Saved to memory."}
+ if(/^forget (all|everything)/.test(l)){S.mem=[];save();panel();return"Memory cleared."}
+ if(/what do you (remember|know about me)/.test(l))return S.mem.length?"I remember: "+S.mem.join("; "):"My memory is empty.";
+ if(m=l.match(/^open (youtube|google|maps|whatsapp)/)){window.open({youtube:"https://www.youtube.com",google:"https://www.google.com",maps:"https://maps.google.com",whatsapp:"https://web.whatsapp.com"}[m[1]],"_blank");return"Opening "+m[1]+"."}
+ if(m=l.match(/^search (?:for )?(.+)/)){window.open("https://www.google.com/search?q="+encodeURIComponent(m[1]),"_blank");return"Searching for "+m[1]+"."}
+ if(m=l.match(/^theme (red|blue|green|purple|orange|cyan)/)){accent({red:"#ff4d5e",blue:"#4da6ff",green:"#39e66b",purple:"#b57aff",orange:"#ffb020",cyan:"#19e6c1"}[m[1]]);save();panel();return"Theme changed."}
+ return null}
+
+/* CHAT */
+function bubble(role,text,cls){const d=document.createElement("div");d.className="m "+(role==="u"?"u":"a")+(cls?" "+cls:"");d.innerHTML=md(text);$("#log").appendChild(d);$("#log").scrollTop=1e9;return d}
+function clearChat(){S.hist=[];save();$("#log").innerHTML="";log("chat cleared")}
+async function ping(){try{const r=await fetch(API()+"/health",{cache:"no-store"});online=r.ok}catch(e){online=false}}
+async function brain(q){const r=await local(q);if(r)return r;
+ const h=S.hist.slice(-10);while(h.length&&h[0].role!=="user")h.shift();const t=performance.now();
+ try{const res=await fetch(API()+"/chat",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({messages:h,memory:S.mem})});
+  const j=await res.json();lats.push(performance.now()-t);if(lats.length>20)lats.shift();online=res.ok;return j.text||j.error||"No reply."}
+ catch(e){online=false;return"I can't reach my server. Open this page from your Render link, or set the server link in Settings."}}
+async function send(text){text=(text||$("#inp").value).trim();if(!text||busy)return;$("#inp").value="";
+ bubble("u",text);S.hist.push({role:"user",content:text});busy=true;msgs++;rip.push({x:Math.random(),y:Math.random(),r:0});
+ setMode("think","THINKING");const sp=bubble("a","…","typing");log("query: "+text.slice(0,28));
+ const ans=await brain(text);sp.classList.remove("typing");sp.innerHTML=md(ans);S.hist.push({role:"assistant",content:ans});save();
+ busy=false;setMode("idle","STANDBY");speak(ans)}
+$("#send").onclick=()=>send();$("#inp").addEventListener("keydown",e=>{if(e.key==="Enter")send()});
+$("#term").onclick=()=>{if(window.speechSynthesis)speechSynthesis.cancel();if(rec)rec.stop();if(S.wake){wake(false);panel()}setMode("idle","TERMINATED");log("terminated");setTimeout(()=>{if(mode==="idle")setMode("idle","STANDBY")},1500)};
+addEventListener("keydown",e=>{if(e.key==="Escape")$("#term").click()});
+["time","weather","timer 1 minute","calculate 12*8+3","tell me a joke","what do you remember"].forEach(c=>{const b=document.createElement("button");b.className="chip";b.textContent=c;b.onclick=()=>send(c);$("#chips").appendChild(b)});
+
+/* PWA + BOOT */
+try{const l=document.createElement("link");l.rel="manifest";l.href=URL.createObjectURL(new Blob([JSON.stringify({name:"JARVIS",short_name:"JARVIS",display:"standalone",start_url:".",background_color:"#050b14",theme_color:"#050b14"})],{type:"application/json"}));document.head.appendChild(l)}catch(e){}
+S.hist.forEach(h=>bubble(h.role==="user"?"u":"a",h.content));bubble("a","Systems online. Type, tap the mic, or turn on the wake word in Settings.");
+panel("memory");ping();setInterval(ping,20000);log("boot complete");
+</script></body></html>
